@@ -22,84 +22,57 @@ firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
   
   // 2. Button for adding Trains
-  $("#add-train-btn").on("click", function(event) {
+  $("#add-train-btn").on("click", function() {
     event.preventDefault();
   
     // Grabs user input
     var trainName = $("#train-name-input").val().trim();
     var trainDestination = $("#destination-input").val().trim();
-    var trainStart = moment($("#start-input").val().trim(), "MM/DD/YYYY").format("X");
-    var trainRate = $("#rate-input").val().trim();
+    var firstTime = $("#rate-input").val().trim();
+    var frequency = moment($("#start-input").val().trim(), "MM/DD/YYYY").format("X");
   
     // Creates local "temporary" object for holding train data
-    var newTrain = {
-      name: trainName,
-      role: trainDestination,
-      start: trainStart,
-      rate: trainRate
-    };
+    database.ref().push({
+   
+      trainName: trainName,
+      trainDestination: trainDestination,
+      firstTime: firstTime,
+      frequency: frequency,
+      dateAdded: firebase.database.ServerValue.TIMESTAMP
+    });
+    $("form")[0].reset();
+  });
   
     // Uploads employee data to the database
-    database.ref().push();
-  
-    // Logs everything to console
-    console.log(newTrain.name);
-    console.log(newTrain.role);
-    console.log(newTrain.start);
-    console.log(newTrain.rate);
-  
-    alert("Train successfully added");
-  
-    // Clears all of the text-boxes
-    $("#train-name-input").val("");
-    $("#destination-input").val("");
-    $("#start-input").val("");
-    $("#rate-input").val("");
-  });
-  
-  // 3. Create Firebase event for adding train to the database and a row in the html when a user adds an entry
-  database.ref().on("child_added", function(childSnapshot) {
-  console.log(childSnapshot.val());
-  
-    // Store everything into a variable.
-    var trainName = childSnapshot.val().name;
-    var trainDestination = childSnapshot.val().role;
-    var trainStart = childSnapshot.val().start;
-    var trainRate = childSnapshot.val().rate;
-  
-    // Employee Info
-    console.log(trainName);
-    console.log(trainDestination);
-    console.log(trainStart);
-    console.log(trainRate);
-  
-    // Prettify the employee start
-    var trainStartPretty = moment.unix(trainStart).format("MM/DD/YYYY");
-  
-    // Calculate the minutes worked using hardcore math
-    // To calculate the minutes worked
-    var trainRate = moment().diff(moment(trainStart, "X"), "minutes");
-    console.log(trainRate);
-  
+    database.ref().on("child_added", function(childSnapshot) {
+      var minAway;
+      // Chang year so first train comes before now
+      var firstTrainNew = moment(childSnapshot.val().firstTrain, "hh:mm").subtract(1, "years");
+      // Difference between the current and firstTrain
+      var diffTime = moment().diff(moment(firstTrainNew), "minutes");
+      var remainder = diffTime % childSnapshot.val().frequency;
+      // Minutes until next train
+      var minAway = childSnapshot.val().frequency - remainder;
+      // Next train time
+      var nextTrain = moment().add(minAway, "minutes");
+      nextTrain = moment(nextTrain).format("hh:mm");
 
-  
-    // Create the new row
-    var newRow = $("<tr>").append(
-      $("<td>").text(trainName),
-      $("<td>").text(trainDestination),
-      $("<td>").text(trainStartPretty),
-      $("<td>").text(trainRate),
-    );
-  
-    // Append the new row to the table
-    $("#train-table > tbody").append(newRow);
+      $("#add-row").append("<tr><td>" + childSnapshot.val().name +
+              "</td><td>" + childSnapshot.val().destination +
+              "</td><td>" + childSnapshot.val().frequency +
+              "</td><td>" + nextTrain + 
+              "</td><td>" + minAway + "</td></tr>");
+
+         
+      }, function(errorObject) {
+          console.log("Errors handled: " + errorObject.code);
   });
-  
-  // Example Time Math
-  // -----------------------------------------------------------------------------
-  // Assume Employee start date of January 1, 2015
-  // Assume current date is March 1, 2016
-  
-  // We know that this is 15 months.
-  // Now we will create code in moment.js to confirm that any attempt we use meets this test case
-  
+
+  database.ref().orderByChild("dateAdded").limitToLast(1).on("child_added", function(snapshot) {
+    
+      $("#train-name-input").html(snapshot.val().trainName);
+      $("#destination-input").html(snapshot.val().trainDestination);
+      $("#rate-input").html(snapshot.val().firstTime);
+      $("#start-input").html(snapshot.val().frequency);
+     
+  });
