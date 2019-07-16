@@ -22,57 +22,57 @@ firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
   
   // 2. Button for adding Trains
-  $("#add-train-btn").on("click", function() {
+  $("#add-train-btn").on("click", function(event) {
     event.preventDefault();
   
     // Grabs user input
     var trainName = $("#train-name-input").val().trim();
     var trainDestination = $("#destination-input").val().trim();
     var firstTime = $("#rate-input").val().trim();
-    var frequency = moment($("#start-input").val().trim(), "MM/DD/YYYY").format("X");
+    var frequency = $("#start-input").val().trim();
   
-    // Creates local "temporary" object for holding train data
-    database.ref().push({
-   
+    var newTrain = {
       trainName: trainName,
       trainDestination: trainDestination,
       firstTime: firstTime,
       frequency: frequency,
-      dateAdded: firebase.database.ServerValue.TIMESTAMP
-    });
-    $("form")[0].reset();
-  });
-  
+      
+    };
+    // Creates local "temporary" object for holding train data
+    database.ref().push(newTrain);
+    
+    $("#train-name-input").val("");
+    $("#destination-input").val("");
+    $("#rate-input").val("");
+    $("#start-input").val("");
+});
     // Uploads employee data to the database
     database.ref().on("child_added", function(childSnapshot) {
-      var minAway;
-      // Chang year so first train comes before now
-      var firstTrainNew = moment(childSnapshot.val().firstTrain, "hh:mm").subtract(1, "years");
-      // Difference between the current and firstTrain
-      var diffTime = moment().diff(moment(firstTrainNew), "minutes");
-      var remainder = diffTime % childSnapshot.val().frequency;
-      // Minutes until next train
-      var minAway = childSnapshot.val().frequency - remainder;
-      // Next train time
-      var nextTrain = moment().add(minAway, "minutes");
-      nextTrain = moment(nextTrain).format("hh:mm");
 
-      $("#add-row").append("<tr><td>" + childSnapshot.val().name +
-              "</td><td>" + childSnapshot.val().destination +
-              "</td><td>" + childSnapshot.val().frequency +
-              "</td><td>" + nextTrain + 
-              "</td><td>" + minAway + "</td></tr>");
+      var trainName = childSnapshot.val().firstTrain;
+      var trainDestination = childSnapshot.val().trainDestination; 
+      var firstTime = childSnapshot.val().firstTime;
+      var frequency = childSnapshot.val().frequency;
 
-         
-      }, function(errorObject) {
-          console.log("Errors handled: " + errorObject.code);
-  });
+      var time = moment();
+      var timeFormat = moment(firstTime, "HH:mm").subtract(1,"years");
+      var timeDifference= moment().diff(moment(timeFormat), "minutes");
+      var timeRemaining = timeDifference % frequency;
+      var timeUntilTrain = frequency - timeRemaining;
+      var nextTrain = moment().add(timeUntilTrain, "minutes");
+      var arrival = moment(nextTrain).format("hh:mm")
 
-  database.ref().orderByChild("dateAdded").limitToLast(1).on("child_added", function(snapshot) {
-    
-      $("#train-name-input").html(snapshot.val().trainName);
-      $("#destination-input").html(snapshot.val().trainDestination);
-      $("#rate-input").html(snapshot.val().firstTime);
-      $("#start-input").html(snapshot.val().frequency);
-     
-  });
+      var newRow = $("<tr>").append(
+        $("<td>").text(trainName),
+        $("<td>").text(trainDestination),
+        $("<td>").text(frequency),
+        $("<td>").text(arrival),
+        $("<td>").text(timeUntilTrain),
+  
+    );
+
+    // Append the new row to the table
+    $("#train-table > tbody").append(newRow);
+});
+
+
