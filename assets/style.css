@@ -2,7 +2,8 @@ body{
     font-family: 'Roboto', sans-serif;
 }
 .jumbotron{
-    background-color: #804000;
+    background-image: url(https://media.giphy.com/media/JCsIWyDn6uoGA/giphy.gif);
+    background-position: center;
     color: white;
     height: 200px;
     padding-top: 40px;
@@ -24,4 +25,7 @@ h5{
    /* padding-right: 5px;
    padding-left: 5px; */
    padding-bottom: 5px;
+}
+.card-body{
+    padding-right: 10px;
 }
